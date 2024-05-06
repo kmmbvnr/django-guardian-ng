@@ -7,7 +7,11 @@ from django.utils.encoding import force_str
 
 from guardian.conf import settings as guardian_settings
 from guardian.ctypes import get_content_type
-from guardian.utils import get_group_obj_perms_model, get_identity, get_user_obj_perms_model
+from guardian.utils import (
+    get_group_obj_perms_model,
+    get_identity,
+    get_user_obj_perms_model,
+)
 
 
 def _get_pks_model_and_ctype(objects):
@@ -73,8 +77,8 @@ class ObjectPermissionChecker:
             return False
         elif self.user and self.user.is_superuser:
             return True
-        if '.' in perm:
-            _, perm = perm.split('.', 1)
+        if "." in perm:
+            _, perm = perm.split(".", 1)
         return perm in self.get_perms(obj)
 
     def get_group_filters(self, obj):
@@ -84,20 +88,22 @@ class ObjectPermissionChecker:
         group_model = get_group_obj_perms_model(obj)
         group_rel_name = group_model.permission.field.related_query_name()
         if self.user:
-            fieldname = '{}__group__{}'.format(
+            fieldname = "{}__group__{}".format(
                 group_rel_name,
                 User.groups.field.related_query_name(),
             )
             group_filters = {fieldname: self.user}
         else:
-            group_filters = {'%s__group' % group_rel_name: self.group}
+            group_filters = {"%s__group" % group_rel_name: self.group}
         if group_model.objects.is_generic():
-            group_filters.update({
-                '%s__content_type' % group_rel_name: ctype,
-                '%s__object_pk' % group_rel_name: obj.pk,
-            })
+            group_filters.update(
+                {
+                    "%s__content_type" % group_rel_name: ctype,
+                    "%s__object_pk" % group_rel_name: obj.pk,
+                }
+            )
         else:
-            group_filters['%s__content_object' % group_rel_name] = obj
+            group_filters["%s__content_object" % group_rel_name] = obj
 
         return group_filters
 
@@ -106,14 +112,16 @@ class ObjectPermissionChecker:
         model = get_user_obj_perms_model(obj)
         related_name = model.permission.field.related_query_name()
 
-        user_filters = {'%s__user' % related_name: self.user}
+        user_filters = {"%s__user" % related_name: self.user}
         if model.objects.is_generic():
-            user_filters.update({
-                '%s__content_type' % related_name: ctype,
-                '%s__object_pk' % related_name: obj.pk,
-            })
+            user_filters.update(
+                {
+                    "%s__content_type" % related_name: ctype,
+                    "%s__object_pk" % related_name: obj.pk,
+                }
+            )
         else:
-            user_filters['%s__content_object' % related_name] = obj
+            user_filters["%s__content_object" % related_name] = obj
 
         return user_filters
 
@@ -158,7 +166,9 @@ class ObjectPermissionChecker:
                 return []
             if self.user and self.user.is_superuser:
                 perms = list(
-                    Permission.objects.filter(content_type=ctype).values_list("codename", flat=True)
+                    Permission.objects.filter(content_type=ctype).values_list(
+                        "codename", flat=True
+                    )
                 )
             elif self.user:
                 # Query user and group permissions separately and then combine
@@ -185,6 +195,9 @@ class ObjectPermissionChecker:
         :param objects: Iterable of Django model objects
 
         """
+        if not objects:
+            return []
+
         if self.user and not self.user.is_active:
             return []
 
@@ -193,7 +206,9 @@ class ObjectPermissionChecker:
 
         if self.user and self.user.is_superuser:
             perms = list(
-                Permission.objects.filter(content_type=ctype).values_list("codename", flat=True)
+                Permission.objects.filter(content_type=ctype).values_list(
+                    "codename", flat=True
+                )
             )
 
             for pk in pks:
@@ -205,46 +220,47 @@ class ObjectPermissionChecker:
         group_model = get_group_obj_perms_model(model)
 
         if self.user:
-            fieldname = 'group__{}'.format(
+            fieldname = "group__{}".format(
                 User.groups.field.related_query_name(),
             )
             group_filters = {fieldname: self.user}
         else:
-            group_filters = {'group': self.group}
+            group_filters = {"group": self.group}
 
         if group_model.objects.is_generic():
-            group_filters.update({
-                'content_type': ctype,
-                'object_pk__in': pks,
-            })
+            group_filters.update(
+                {
+                    "content_type": ctype,
+                    "object_pk__in": pks,
+                }
+            )
         else:
-            group_filters.update({
-                'content_object_id__in': pks
-            })
+            group_filters.update({"content_object_id__in": pks})
 
         if self.user:
             model = get_user_obj_perms_model(model)
             user_filters = {
-                'user': self.user,
+                "user": self.user,
             }
 
             if model.objects.is_generic():
-                user_filters.update({
-                    'content_type': ctype,
-                    'object_pk__in': pks
-                })
+                user_filters.update({"content_type": ctype, "object_pk__in": pks})
             else:
-                user_filters.update({
-                    'content_object_id__in': pks
-                })
+                user_filters.update({"content_object_id__in": pks})
 
             # Query user and group permissions separately and then combine
             # the results to avoid a slow query
-            user_perms_qs = model.objects.filter(**user_filters).select_related('permission')
-            group_perms_qs = group_model.objects.filter(**group_filters).select_related('permission')
+            user_perms_qs = model.objects.filter(**user_filters).select_related(
+                "permission"
+            )
+            group_perms_qs = group_model.objects.filter(**group_filters).select_related(
+                "permission"
+            )
             perms = chain(user_perms_qs, group_perms_qs)
         else:
-            perms = group_model.objects.filter(**group_filters).select_related('permission')
+            perms = group_model.objects.filter(**group_filters).select_related(
+                "permission"
+            )
 
         # initialize entry in '_obj_perms_cache' for all prefetched objects
         for obj in objects:
@@ -266,24 +282,28 @@ class ObjectPermissionChecker:
     def _init_obj_prefetch_cache(obj, *querysets):
         cache = {}
         for qs in querysets:
-            perms = qs.select_related('permission__codename').values_list('content_type_id', 'object_pk',
-                                                                          'permission__codename')
+            perms = qs.select_related("permission__codename").values_list(
+                "content_type_id", "object_pk", "permission__codename"
+            )
             for p in perms:
                 if p[:2] not in cache:
                     cache[p[:2]] = []
-                cache[p[:2]] += [p[2], ]
+                cache[p[:2]] += [
+                    p[2],
+                ]
         obj._guardian_perms_cache = cache
         return obj, cache
 
     def _prefetch_cache(self):
         from guardian.utils import get_user_obj_perms_model, get_group_obj_perms_model
+
         UserObjectPermission = get_user_obj_perms_model()
         GroupObjectPermission = get_group_obj_perms_model()
         if self.user:
             obj = self.user
             querysets = [
                 UserObjectPermission.objects.filter(user=obj),
-                GroupObjectPermission.objects.filter(group__user=obj)
+                GroupObjectPermission.objects.filter(group__user=obj),
             ]
         else:
             obj = self.group
@@ -291,7 +311,7 @@ class ObjectPermissionChecker:
                 GroupObjectPermission.objects.filter(group=obj),
             ]
 
-        if not hasattr(obj, '_guardian_perms_cache'):
+        if not hasattr(obj, "_guardian_perms_cache"):
             obj, cache = self._init_obj_prefetch_cache(obj, *querysets)
         else:
             cache = obj._guardian_perms_cache

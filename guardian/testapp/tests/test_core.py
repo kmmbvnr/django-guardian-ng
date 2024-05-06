@@ -120,6 +120,10 @@ class ObjectPermissionCheckerTest(ObjectPermissionTestCase):
         # assert anonymous user has no object permissions at all for obj
         self.assertTrue([] == list(check.get_perms(self.ctype)))
 
+    def test_empty_permission_list(self):
+        user = User.objects.create(username='testuser')
+        ObjectPermissionChecker(user).prefetch_perms([])
+
     def test_superuser(self):
         user = User.objects.create(username='superuser', is_superuser=True)
         check = ObjectPermissionChecker(user)
