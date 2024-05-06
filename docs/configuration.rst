@@ -19,6 +19,25 @@ and hook guardian's authentication backend::
        'guardian.backends.ObjectPermissionBackend',
    )
 
+If you use the {{ perms }} variable in your templates, you might also need to
+add the optimized guardian auth context processor. This should be used together
+with the standard django.contrib.auth.context_processors.auth.This optimization
+helps mitigate performance issues, such as the "N+1 query" problem, particularly
+when permissions are checked frequently in templates.
+
+   TEMPLATES = [
+      {
+         ....
+         "OPTIONS": {
+               "context_processors": [
+                  "django.contrib.auth.context_processors.auth", # this is default
+                  "guardian.context_processors.auth",
+                  ...
+               ]
+         },
+      },
+   ]
+
 .. note::
    Once project is configured to work with ``django-guardian``, calling
    ``migrate`` management command would create ``User`` instance for
