@@ -90,3 +90,40 @@ permissions.
 .. note::
    Example above is shipped with ``django-guardian`` package with the example
    project.
+
+
+Restrict Admin Object Access
+----------------------------
+
+GuardedModelAdmin does not introduce object-level permissions for the Admin site
+by default. If you need to restrict access based on django-guardian permissions,
+you need to override additional methods in the Django Admin:
+
+    class PostAdmin(GuardedModelAdmin):
+        ...
+
+        def get_queryset(self, request):
+            queryset = super().get_queryset(request)
+            codename = get_permission_codename("view", self.opts)
+            return get_objects_for_user(request.user, f"{self.opts.app_label}.{codename}")
+
+        def has_delete_permission(self, request, obj=None):
+            permitted = super().has_delete_permission(request, obj=boj)
+            if not permitted and obj:
+                codename = get_permission_codename("delete", self.opts)
+                permitted = request.user.has_perm(f"{self.opts.app_label}.{codename}")
+            return permitted
+
+        def has_view_permission(self, request, obj=None):
+            permitted = super().has_delete_permission(request, obj=boj)
+            if not permitted and obj:
+                codename = get_permission_codename("view", self.opts)
+                permitted = request.user.has_perm(f"{self.opts.app_label}.{codename}")
+            return permitted
+
+        def has_change_permission(self, request, obj=None):
+            permitted = super().has_change_permission(request, obj=boj)
+            if not permitted and obj:
+                codename = get_permission_codename("change", self.opts)
+                permitted = request.user.has_perm(f"{self.opts.app_label}.{codename}")
+            return permitted
